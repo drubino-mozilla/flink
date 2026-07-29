@@ -5,6 +5,69 @@
  * Author: David Rubino
  */
 
+let lastRightClickedTimestamp = null;
+
+document.addEventListener('contextmenu', (e) => {
+    const tsLink = e.target.closest('a.c-timestamp');
+    lastRightClickedTimestamp = tsLink;
+});
+
+function getSlackContext() {
+    if (!lastRightClickedTimestamp) return null;
+
+    const dataTs = lastRightClickedTimestamp.getAttribute('data-ts');
+    if (!dataTs) return null;
+
+    // Find sender by walking up to the message container
+    let sender = null;
+    let msgContainer = lastRightClickedTimestamp.closest('[data-qa="virtual-list-item"]');
+
+    if (msgContainer) {
+        let senderEl = msgContainer.querySelector('[data-qa="message_sender_name"]');
+
+        // Compact gutter: consecutive messages from the same sender hide the name.
+        // Walk backwards through sibling list items until we find one with a sender.
+        if (!senderEl) {
+            let sibling = msgContainer.previousElementSibling;
+            while (sibling) {
+                senderEl = sibling.querySelector('[data-qa="message_sender_name"]');
+                if (senderEl) break;
+                sibling = sibling.previousElementSibling;
+            }
+        }
+
+        if (senderEl) {
+            sender = senderEl.textContent.trim();
+        }
+    }
+
+    // Channel name from the header
+    let channelName = '';
+    const channelNameEl = document.querySelector('[data-qa="channel_name"]');
+    if (channelNameEl) {
+        const titleSpan = channelNameEl.querySelector('.p-view_header__channel_title');
+        channelName = titleSpan ? titleSpan.textContent.trim() : channelNameEl.textContent.trim();
+    }
+
+    // Channel type from the header button class and icon
+    let channelType = 'public';
+    const headerButton = document.querySelector('[data-qa="channel_name_button"]');
+    if (headerButton) {
+        if (headerButton.classList.contains('p-view_header__big_button--dm')) {
+            channelType = 'dm';
+        } else if (headerButton.classList.contains('p-view_header__big_button--mpdm')) {
+            channelType = 'mpdm';
+        } else {
+            const iconSpan = document.querySelector('[data-inline-channel-type-icon]');
+            if (iconSpan && iconSpan.getAttribute('data-inline-channel-type-icon') === 'lock-filled') {
+                channelType = 'private';
+            }
+        }
+    }
+
+    return { sender, dataTs, channelName, channelType };
+}
+
 // Compose a formatted link for the current page
 // Each formatted link has three parts: preText, urlText, and postText.
 // preText: Text to appear before the link. Optional. 
@@ -60,6 +123,14 @@ function getCurrentPageFormattedLink() {
         urlText = urlText.replace(/_/g, ' ');
         siteName = 'Wikipedia';
 
+    // Experimenter (Nimbus) Experiments
+    // URL starts with https://experimenter.services.mozilla.com/nimbus/
+    // urlText is the experiment slug extracted from the URL. There is no preText or postText.
+    } else if (/https:\/\/experimenter\.services\.mozilla\.com\/nimbus\/[^/]+/.test(url)) {
+        let slug = url.match(/\/nimbus\/([^/?]+)/)[1];
+        urlText = slug;
+        siteName = 'Experimenter';
+
     // GitHub Issues and Pull Requests
     // URL matches https://github.com/{owner}/{repo}/issues/{number} or .../pull/{number}
     // preText is [owner/repo]. urlText is the issue/PR number. postText is the title.
@@ -95,6 +166,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'getSelection') {
         selection = getCurrentPageSelection();
         sendResponse(selection);
+    }
+
+    if (request.action === 'getSlackContext') {
+        sendResponse(getSlackContext());
     }
 
     if (request.action === 'getOpenGraphTitle') {

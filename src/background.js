@@ -31,6 +31,15 @@ chrome.contextMenus.create({
     contexts: ['selection']
 });
 
+// Persistent context menu item for right-clicking Slack message timestamp links
+chrome.contextMenus.create({
+    id: 'copySlackFlink',
+    title: 'Copy Slack Flink',
+    contexts: ['link'],
+    documentUrlPatterns: ['*://app.slack.com/client/*'],
+    targetUrlPatterns: ['*://*.slack.com/archives/*/p*']
+});
+
 //Add or remove page action button and context menu when the tab is updated
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
@@ -334,6 +343,51 @@ async function copySelectionLink(tab) {
     ]);
 }
 
+async function copySlackFlink(linkUrl, tabId) {
+    const context = await new Promise((resolve) => {
+        chrome.tabs.sendMessage(tabId, { action: 'getSlackContext' }, resolve);
+    });
+
+    if (!context || !context.dataTs) {
+        console.log('No Slack context available, falling back to raw URL copy');
+        await navigator.clipboard.writeText(linkUrl);
+        return;
+    }
+
+    const isReply = /[?&]thread_ts=/.test(linkUrl);
+    const messageType = isReply ? 'reply' : 'message';
+
+    const date = new Date(parseFloat(context.dataTs) * 1000);
+    const monthDay = date.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+
+    let channelDescriptor = '';
+    switch (context.channelType) {
+        case 'public':
+            channelDescriptor = '#' + context.channelName;
+            break;
+        case 'private':
+            channelDescriptor = '\u{1F512}' + context.channelName;
+            break;
+        case 'dm':
+            channelDescriptor = 'DM with ' + context.channelName;
+            break;
+        case 'mpdm':
+            channelDescriptor = 'group DM';
+            break;
+    }
+
+    const sender = context.sender || 'unknown';
+    const displayText = 'Slack ' + messageType + ' from ' + sender + ' on ' + monthDay + ' in ' + channelDescriptor;
+    const plainText = displayText + ': ' + linkUrl;
+
+    await navigator.clipboard.write([
+        new ClipboardItem({
+            'text/plain': new Blob([plainText], { type: 'text/plain' }),
+            'text/html': new Blob(["<a href='" + linkUrl + "'>" + displayText + "</a>"], { type: 'text/html' })
+        })
+    ]);
+}
+
 // Get shared link options configuration for a tab
 function getLinkOptions(tab) {
     const options = [];
@@ -410,6 +464,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
                 'text/html': new Blob(["<a href='" + tab.url + "'>" + selection + "</a>"], { type: 'text/html' })
             })
         ]);
+        return;
+    }
+
+    if (info.menuItemId === 'copySlackFlink') {
+        await copySlackFlink(info.linkUrl, tab.id);
         return;
     }
 
