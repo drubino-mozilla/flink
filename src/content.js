@@ -41,31 +41,57 @@ function getSlackContext() {
         }
     }
 
-    // Channel name from the header
-    let channelName = '';
-    const channelNameEl = document.querySelector('[data-qa="channel_name"]');
-    if (channelNameEl) {
-        const titleSpan = channelNameEl.querySelector('.p-view_header__channel_title');
-        channelName = titleSpan ? titleSpan.textContent.trim() : channelNameEl.textContent.trim();
-    }
+    // Identify the channel from the message's own permalink. Reading the page
+    // header instead breaks in Later, Activity, and thread flexpanes, which
+    // either have no channel header or show one for a different view.
+    const idMatch = (lastRightClickedTimestamp.getAttribute('href') || '').match(/\/archives\/([A-Z0-9]+)\//);
+    const channel = resolveChannel(idMatch ? idMatch[1] : null);
 
-    // Channel type from the header button class and icon
-    let channelType = 'public';
-    const headerButton = document.querySelector('[data-qa="channel_name_button"]');
-    if (headerButton) {
-        if (headerButton.classList.contains('p-view_header__big_button--dm')) {
-            channelType = 'dm';
-        } else if (headerButton.classList.contains('p-view_header__big_button--mpdm')) {
-            channelType = 'mpdm';
-        } else {
-            const iconSpan = document.querySelector('[data-inline-channel-type-icon]');
-            if (iconSpan && iconSpan.getAttribute('data-inline-channel-type-icon') === 'lock-filled') {
-                channelType = 'private';
+    return { sender, dataTs, channelName: channel.name, channelType: channel.type };
+}
+
+// Resolve a channel id to a name and type, preferring an inline channel entity
+// (how thread flexpanes label the channel) over the channel view header.
+// Returns type 'unknown' when the channel cannot be identified, so that callers
+// can leave the channel out rather than guessing.
+function resolveChannel(channelId) {
+    if (channelId) {
+        const entities = document.querySelectorAll('[data-channel-id="' + channelId + '"]');
+        for (const entity of entities) {
+            const icon = entity.querySelector('[data-inline-channel-type-icon]');
+            const nameEl = entity.querySelector('[data-qa="inline_channel_entity__name"]');
+            if (icon && nameEl) {
+                return {
+                    name: nameEl.textContent.trim(),
+                    type: icon.getAttribute('data-inline-channel-type-icon') === 'lock-filled' ? 'private' : 'public'
+                };
             }
         }
     }
 
-    return { sender, dataTs, channelName, channelType };
+    const headerButton = document.querySelector('[data-qa="channel_name_button"]');
+    const channelNameEl = document.querySelector('[data-qa="channel_name"]');
+    if (!headerButton || !channelNameEl) {
+        return { name: '', type: 'unknown' };
+    }
+
+    const titleSpan = channelNameEl.querySelector('.p-view_header__channel_title');
+    const name = titleSpan ? titleSpan.textContent.trim() : channelNameEl.textContent.trim();
+
+    if (headerButton.classList.contains('p-view_header__big_button--dm')) {
+        return { name, type: 'dm' };
+    }
+    if (headerButton.classList.contains('p-view_header__big_button--mpdm')) {
+        return { name, type: 'mpdm' };
+    }
+
+    // Scope the icon to the header button. A Slack page contains many channel
+    // icons, and the first one in the document usually belongs elsewhere.
+    const icon = headerButton.querySelector('[data-inline-channel-type-icon]');
+    return {
+        name,
+        type: icon && icon.getAttribute('data-inline-channel-type-icon') === 'lock-filled' ? 'private' : 'public'
+    };
 }
 
 // Compose a formatted link for the current page

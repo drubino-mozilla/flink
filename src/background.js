@@ -361,23 +361,27 @@ async function copySlackFlink(linkUrl, tabId) {
     const monthDay = date.toLocaleString('en-US', { month: 'short', day: 'numeric' });
 
     let channelDescriptor = '';
-    switch (context.channelType) {
-        case 'public':
-            channelDescriptor = '#' + context.channelName;
-            break;
-        case 'private':
-            channelDescriptor = '\u{1F512}' + context.channelName;
-            break;
-        case 'dm':
-            channelDescriptor = 'DM with ' + context.channelName;
-            break;
-        case 'mpdm':
-            channelDescriptor = 'group DM';
-            break;
+    if (context.channelType === 'mpdm') {
+        channelDescriptor = 'group DM';
+    } else if (context.channelName) {
+        switch (context.channelType) {
+            case 'public':
+                channelDescriptor = '#' + context.channelName;
+                break;
+            case 'private':
+                channelDescriptor = '\u{1F512}' + context.channelName;
+                break;
+            case 'dm':
+                channelDescriptor = 'DM with ' + context.channelName;
+                break;
+        }
     }
 
     const sender = context.sender || 'unknown';
-    const displayText = 'Slack ' + messageType + ' from ' + sender + ' on ' + monthDay + ' in ' + channelDescriptor;
+    // Leave the channel out entirely when it could not be identified, rather
+    // than trailing a bare '#'
+    const displayText = 'Slack ' + messageType + ' from ' + sender + ' on ' + monthDay
+        + (channelDescriptor ? ' in ' + channelDescriptor : '');
     const plainText = displayText + ': ' + linkUrl;
 
     await navigator.clipboard.write([
