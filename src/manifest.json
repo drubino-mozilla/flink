@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
     "name": "Flink",
-    "version": "1.2.7",
+    "version": "1.2.8",
     "applications": {
         "gecko": {
             "id": "flink@joivid.com"
