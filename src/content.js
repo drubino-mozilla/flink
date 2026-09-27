@@ -149,13 +149,13 @@ function getCurrentPageFormattedLink() {
         urlText = urlText.replace(/_/g, ' ');
         siteName = 'Wikipedia';
 
-    // Experimenter (Nimbus) Experiments
-    // URL starts with https://experimenter.services.mozilla.com/nimbus/
-    // urlText is the experiment slug extracted from the URL. There is no preText or postText.
-    } else if (/https:\/\/experimenter\.services\.mozilla\.com\/nimbus\/[^/]+/.test(url)) {
-        let slug = url.match(/\/nimbus\/([^/?]+)/)[1];
-        urlText = slug;
-        siteName = 'Experimenter';
+    // Experimenter (Nimbus) Experiments and Rollouts
+    // URL is https://experimenter.services.mozilla.com/nimbus/{slug}/... in the old UI,
+    // or .../nimbus/rollouts/{slug}/ in the new UI (experiments are expected to follow).
+    // urlText is the experiment slug. There is no preText or postText.
+    } else if (/https:\/\/experimenter\.services\.mozilla\.com\/nimbus\//.test(url)) {
+        urlText = getExperimenterSlug(url);
+        siteName = urlText ? 'Experimenter' : '';
 
     // GitHub Issues and Pull Requests
     // URL matches https://github.com/{owner}/{repo}/issues/{number} or .../pull/{number}
@@ -179,6 +179,21 @@ function getCurrentPageFormattedLink() {
     }
 
     return { preText, urlText, postText, siteName };
+}
+
+// Path segments under /nimbus/ that are pages of their own rather than slugs
+const experimenterReservedPaths = ['rollouts', 'experiments', 'features', 'new'];
+
+// Prefer the slug the new UI shows in its header, since it does not depend on
+// the URL layout. Fall back to the URL for the old UI, which has no such element.
+function getExperimenterSlug(url) {
+    const slugButton = document.querySelector('#experiment-slug');
+    const slugText = slugButton ? slugButton.textContent.trim() : '';
+    if (slugText) return slugText;
+
+    const match = url.match(/\/nimbus\/(?:(?:rollouts|experiments)\/)?([^/?#]+)/);
+    if (!match || experimenterReservedPaths.includes(match[1])) return '';
+    return decodeURIComponent(match[1]);
 }
 
 // Send link information to the background script when requested 

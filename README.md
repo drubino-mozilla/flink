@@ -18,7 +18,7 @@ This option is offered only for specific sites where I've authored support for e
 - **Bugzilla Bugs** use the ID as the link, followed by the title in quotes: [1234567](): "Firefox crashes when playing multiple videos in the same tab"
 - **GitHub Issues** use the repo and issue number as context: [nicudo/portio] [Issue #16627](): "Class fields are not transformed correctly when targeting ES2022"
 - **GitHub PRs** use the repo and PR number as context: [nicudo/portio] [PR #16645](): "Fix class field ordering with decorators"
-- **Experimenter** experiments use the slug: [default-new-users-to-launch-firefox-when-windows-starts-rollout]()
+- **Experimenter** experiments and rollouts use the slug: [default-new-users-to-launch-firefox-when-windows-starts-rollout]()
 - **Wikipedia Articles** use the article name: [Pulitzer Prize]()
 - **Slack Messages** use sender, date, and channel context (right-click a message timestamp on app.slack.com): [Slack message from Venetia Tay on Jun 12 in #desktop-integrations]()
 
@@ -29,7 +29,7 @@ The above are formats copied to the HTML clipboard. Each link type also has a be
 - **Bugzilla Bugs**: `https://bugzilla.mozilla.org/show_bug.cgi?id=1234567: "Firefox crashes when playing multiple videos in the same tab"`
 - **GitHub Issues**: `https://github.com/nicudo/portio/issues/16627: "Class fields are not transformed correctly when targeting ES2022"`
 - **GitHub PRs**: `https://github.com/nicudo/portio/pull/16645: "Fix class field ordering with decorators"`
-- **Experimenter**: `https://experimenter.services.mozilla.com/nimbus/default-new-users-to-launch-firefox-when-windows-starts-rollout/summary/`
+- **Experimenter**: `https://experimenter.services.mozilla.com/nimbus/rollouts/default-new-users-to-launch-firefox-when-windows-starts-rollout/`
 - **Wikipedia Articles**: `https://en.wikipedia.org/wiki/Pulitzer_Prize`
 - **Slack Messages**: `Slack message from Venetia Tay on Jun 12 in #desktop-integrations: https://mozilla.slack.com/archives/C04SV4DAXL7/p1779479765942139`
 
