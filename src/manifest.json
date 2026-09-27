@@ -2,9 +2,12 @@
     "manifest_version": 2,
     "name": "Flink",
     "version": "1.2.8",
-    "applications": {
+    "browser_specific_settings": {
         "gecko": {
-            "id": "flink@joivid.com"
+            "id": "flink@joivid.com",
+            "data_collection_permissions": {
+                "required": ["none"]
+            }
         }
     },
     "permissions": ["activeTab", "clipboardWrite", "contextMenus", "tabs"],
@@ -14,6 +17,8 @@
     "page_action": {
         "default_title": "Copy link to clipboard",
         "default_icon": {
+            "19": "images/flink-19.png",
+            "38": "images/flink-38.png",
             "96": "images/flink-96.png"
         }
     },
