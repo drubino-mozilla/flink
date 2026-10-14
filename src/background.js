@@ -17,6 +17,18 @@ let pageActionVisible = {};
 let pageLoading = {};
 let activeTabId = null;
 
+// Kept in memory so the page action click handler can copy without awaiting storage,
+// which would risk losing the user activation needed for clipboard writes
+let alwaysCopyFlink = false;
+
+chrome.storage.local.get({ alwaysCopyFlink: false }, (items) => {
+    alwaysCopyFlink = items.alwaysCopyFlink;
+    // The menu may have been built before the setting loaded
+    chrome.contextMenus.update('alwaysCopyFlink', { checked: alwaysCopyFlink }, () => {
+        void chrome.runtime.lastError;
+    });
+});
+
 // Initialize active tab on startup
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs[0]) {
@@ -204,7 +216,8 @@ function updateContextMenuItems(tab) {
     }
 }
 
-const pageActionMenuIds = ['copyLink', 'copyTitle', 'copySelectionLink', 'copyFormattedLink'];
+const pageActionMenuIds = ['copyLink', 'copyTitle', 'copySelectionLink', 'copyFormattedLink',
+    'pageActionSettingsSeparator', 'alwaysCopyFlink'];
 
 function removePageActionMenuItems() {
     pageActionMenuIds.forEach(id => {
@@ -230,6 +243,21 @@ function createContextMenuItems(tab) {
                 contexts: ['page_action']
             });
         }
+    });
+
+    // Firefox shows at most 6 top-level page action menu items (separators included) and
+    // moves the rest into a submenu, so these fit only while there are at most 4 copy options
+    chrome.contextMenus.create({
+        id: 'pageActionSettingsSeparator',
+        type: 'separator',
+        contexts: ['page_action']
+    });
+    chrome.contextMenus.create({
+        id: 'alwaysCopyFlink',
+        type: 'checkbox',
+        title: 'Always copy Flink when available',
+        checked: alwaysCopyFlink,
+        contexts: ['page_action']
     });
 }
 
@@ -392,6 +420,10 @@ async function copySlackFlink(linkUrl, tabId) {
     ]);
 }
 
+function hasFormattedLink(tabId) {
+    return Boolean(formattedLinkUrlText[tabId] && siteName[tabId]);
+}
+
 // Get shared link options configuration for a tab
 function getLinkOptions(tab) {
     const options = [];
@@ -428,9 +460,7 @@ function getLinkOptions(tab) {
     }
     
     // Formatted link option (only if formatted link data exists)
-    if (formattedLinkUrlText[tab.id] !== null && formattedLinkUrlText[tab.id] !== undefined && 
-        formattedLinkUrlText[tab.id] !== '' && 
-        siteName[tab.id] !== null && siteName[tab.id] !== undefined && siteName[tab.id] !== '') {
+    if (hasFormattedLink(tab.id)) {
         options.push({
             id: 'copyFormattedLink',
             label: 'Copy ' + siteName[tab.id] + ' Flink: ',
@@ -448,9 +478,14 @@ function getLinkOptions(tab) {
     return options;
 }
 
-// When the button is clicked, copy the URL to the clipboard
+// When the button is clicked, copy the URL (or the Flink, if enabled and available) to the clipboard
 // Note: This will not fire when popup is defined, but kept for backwards compatibility
 chrome.pageAction.onClicked.addListener(async (tab) => {
+    if (alwaysCopyFlink && hasFormattedLink(tab.id)) {
+        console.log('Page action button clicked, copying Flink to clipboard');
+        await copyFormattedLink(tab);
+        return;
+    }
     console.log('Page action button clicked, copying URL to clipboard');
     await copyUrl(tab);
 });
@@ -473,6 +508,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
     if (info.menuItemId === 'copySlackFlink') {
         await copySlackFlink(info.linkUrl, tab.id);
+        return;
+    }
+
+    if (info.menuItemId === 'alwaysCopyFlink') {
+        alwaysCopyFlink = info.checked;
+        chrome.storage.local.set({ alwaysCopyFlink });
         return;
     }
 

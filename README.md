@@ -2,7 +2,7 @@
 
 This extension is your comprehensive solution for copying links... or it will be one day as its feature set expands. Ideally, we'll get some of this functionality built into Firefox, but for now, this extension serves as a playground.
 
-The **Flink** address bar button simply copies the URL to the clipboard as is. If you right-click, you'll see this option repeated, and then you'll also see up to three additional options:
+The **Flink** address bar button simply copies the URL to the clipboard as is. If you right-click, you'll see this option repeated, and then you'll also see up to three additional options, followed by the **Always copy Flink when available** setting. When that setting is checked, clicking the button copies the page's Flink (see below) on supported sites, and still copies the URL everywhere else.
 
 ### Copy Title
 The page title is used for the label for the link. This looks for the OpenGraph title on the page if there is one, and if there isn't one, it uses the HTML title of the page.
