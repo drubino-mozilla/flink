@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
     "name": "Flink",
-    "version": "1.2.8",
+    "version": "1.2.9",
     "browser_specific_settings": {
         "gecko": {
             "id": "flink@joivid.com",
